@@ -54,9 +54,10 @@ def load_data(directory):
 
 
 def main():
-    if len(sys.argv) > 2:
-        sys.exit("Usage: python degrees.py [directory]")
-    directory = sys.argv[1] if len(sys.argv) == 2 else "large"
+    # if len(sys.argv) > 2:
+    # #     sys.exit("Usage: python degrees.py [directory]")
+    # directory = sys.argv[1] if len(sys.argv) == 2 else "large"
+    directory = "C:\\Users\\FinnCharlton\\Github Repos\\CS50-Intro-to-AI\\degrees\\degrees\\small"
 
     # Load data from files into memory
     print("Loading data...")
@@ -92,9 +93,34 @@ def shortest_path(source, target):
 
     If no possible path, returns None.
     """
+    #Initialise Frontier and add initial node
+    initalNode = Node(state=source,parent=None,action=None)
+    frontier = StackFrontier()
+    frontier.add(initalNode)
 
-    # TODO
-    raise NotImplementedError
+    # #Add variables
+    checkedActors = []
+
+    #Check if frontier is empty
+    if frontier.empty():
+        raise Exception("No solution")
+    
+    #Remove a node to check
+    currentNode = frontier.remove()
+
+    #Check if node contains target
+    if frontier.state() == target:
+        completeNode = currentNode
+
+
+
+
+
+
+
+
+
+    # raise NotImplementedError
 
 
 def person_id_for_name(name):
@@ -136,9 +162,10 @@ def neighbors_for_person(person_id):
     return neighbors
 
 
-if __name__ == "__main__":
-    main()
-
+# if __name__ == "__main__":
+#     main()
 
 load_data("C:\\Users\\FinnCharlton\\Github Repos\\CS50-Intro-to-AI\\degrees\\degrees\\small")
-print(people)
+source = "Tom Hanks"
+target = "Emam Watson"
+print(shortest_path(source,target).state)
