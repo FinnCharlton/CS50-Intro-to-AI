@@ -55,9 +55,9 @@ def load_data(directory):
 
 def main():
     # if len(sys.argv) > 2:
-    # #     sys.exit("Usage: python degrees.py [directory]")
+    #     sys.exit("Usage: python degrees.py [directory]")
     # directory = sys.argv[1] if len(sys.argv) == 2 else "large"
-    directory = "C:\\Users\\FinnCharlton\\Github Repos\\CS50-Intro-to-AI\\degrees\\degrees\\small"
+    directory = "C:\\Users\\FinnCharlton\\Github Repos\\CS50-Intro-to-AI\\degrees\\degrees\\large"
 
     # Load data from files into memory
     print("Loading data...")
@@ -71,7 +71,8 @@ def main():
     if target is None:
         sys.exit("Person not found.")
 
-    path = shortest_path(source, target)
+    path = shortest_path(source,target)
+    print(path)
 
     if path is None:
         print("Not connected.")
@@ -95,32 +96,54 @@ def shortest_path(source, target):
     """
     #Initialise Frontier and add initial node
     initalNode = Node(state=source,parent=None,action=None)
-    frontier = StackFrontier()
+    frontier = QueueFrontier()
     frontier.add(initalNode)
 
     # #Add variables
-    checkedActors = []
+    checkedActors = set()
+    checkedNodes = set()
+    completeNode = Node(state=None,parent=None,action=None)
 
-    #Check if frontier is empty
-    if frontier.empty():
-        raise Exception("No solution")
+    #Initialise loop
+    while True:
+
+        #Check if frontier is empty
+        if frontier.empty():
+            return None
     
-    #Remove a node to check
-    currentNode = frontier.remove()
+        #Remove a node to check
+        currentNode = frontier.remove()
 
-    #Check if node contains target
-    if frontier.state() == target:
-        completeNode = currentNode
+        #Add current node to explored set
+        checkedActors.add(currentNode.state)
+        checkedNodes.add(currentNode)
 
+        # Find all new nodes
+        for film in people[currentNode.state]["movies"]:
+            for actor in movies[film]["stars"]:
+                nodetoAdd = Node(state=actor,parent=currentNode.state,action=film)
 
+                #Check if node is target
+                if nodetoAdd.state == target:
+                    checkNode = nodetoAdd
+                    infoList = []
 
+                    #If it is, rewind through node parents and add to infoList
+                    while True:
+                        infoList.append((checkNode.action,checkNode.state))
+                        for nd in checkedNodes:
+                            if nd.state == checkNode.parent:
+                                checkNode = nd    
+                                break      
 
+                        #Return reversed list when final node is reached
+                        if checkNode.parent is None:
+                            return infoList[::-1]
+                        
+                #Expand frontier if node is not already in frontier or previously checked nodes.        
+                if not frontier.contains_state(nodetoAdd.state) and nodetoAdd.state not in checkedActors:
+                    frontier.add(nodetoAdd)
 
-
-
-
-
-    # raise NotImplementedError
 
 
 def person_id_for_name(name):
@@ -162,10 +185,5 @@ def neighbors_for_person(person_id):
     return neighbors
 
 
-# if __name__ == "__main__":
-#     main()
-
-load_data("C:\\Users\\FinnCharlton\\Github Repos\\CS50-Intro-to-AI\\degrees\\degrees\\small")
-source = "Tom Hanks"
-target = "Emam Watson"
-print(shortest_path(source,target).state)
+if __name__ == "__main__":
+    main()
