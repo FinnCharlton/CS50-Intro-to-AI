@@ -7,7 +7,7 @@ class Minesweeper():
     Minesweeper game representation
     """
 
-    def __init__(self, height=8, width=8, mines=8):
+    def __init__(self, height=15, width=15, mines=40):
 
         # Set initial width, height, and number of mines
         self.height = height
@@ -128,7 +128,7 @@ class MinesweeperAI():
     Minesweeper game player
     """
 
-    def __init__(self, height=8, width=8):
+    def __init__(self, height=15, width=15):
 
         # Set initial height and width
         self.height = height
@@ -190,22 +190,76 @@ class MinesweeperAI():
                 if i >= 0 and i < self.width and j >=0 and j < self.height:
                     surroundingCells.add((i, j))
 
-        #Remove current cell, and cells marked as safe or mine
+        #Remove current cell, and cells marked as safe or mine. Remove 1 from count for every mine found
+        newCount = count
+
         surroundingCells.remove(cell)
-        for safeCell in self.safe:
+        for safeCell in self.safes:
             surroundingCells.discard(safeCell)
         for mineCell in self.mines:
-            surroundingCells.discard(mineCell)
+            if mineCell in surroundingCells:
+                surroundingCells.remove(mineCell)
+                newCount -= 1
 
         #Create and add sentence with surrounding cell knowledge
-        newSentence = Sentence(surroundingCells, count)
+        newSentence = Sentence(surroundingCells, newCount)
         self.knowledge.append(newSentence)
 
+        #Update knowledge base with new inferences
+        while True:
+            changeCounter = 0
 
+            #Create mine and safe sets
+            inferMines = set()
+            inferSafes = set()
 
+            #Check if sentences can determine safe or mine cells, and add to sets
+            for checkSentence in self.knowledge:
+                if len(checkSentence.cells) > 0:
 
+                    if len(checkSentence.cells) == int(checkSentence.count):
+                        for cell in checkSentence.cells:
+                            inferMines.add(cell)
 
-        raise NotImplementedError
+                    if int(checkSentence.count) == 0:
+                        for cell in checkSentence.cells:
+                            inferSafes.add(cell)
+
+            #Update knowledge base with inferred sets
+            for cell in inferMines:
+                self.mark_mine(cell)
+                changeCounter += 1
+
+            for cell in inferSafes:
+                self.mark_safe(cell)
+                changeCounter += 1
+
+            #Delete empty sentences from knowledge base
+            for checkSentence in self.knowledge:
+                if len(checkSentence.cells) == 0:
+                    self.knowledge.remove(checkSentence)
+
+            #Check each sentence for subsets. Add new sentence based on subsets      
+            inferNewSentences = []      
+            for checkSentenceA in self.knowledge:                  
+                    for checkSentenceB in self.knowledge:
+
+                        if checkSentenceA != checkSentenceB and checkSentenceB.cells.issubset(checkSentenceA.cells):
+                            subtractedSentence = Sentence(checkSentenceA.cells.difference(checkSentenceB.cells),
+                                                        checkSentenceA.count - checkSentenceB.count)
+
+                            if subtractedSentence not in self.knowledge:
+                                inferNewSentences.append(subtractedSentence)
+
+            #Update knowledge with new sentences    
+            for item in inferNewSentences:
+                self.knowledge.append(item)
+                changeCounter += 1
+
+            #Break if no changes were made
+            if changeCounter == 0:
+                break
+
 
     def make_safe_move(self):
         """
@@ -216,7 +270,23 @@ class MinesweeperAI():
         This function may use the knowledge in self.mines, self.safes
         and self.moves_made, but should not modify any of those values.
         """
-        raise NotImplementedError
+
+        #Create set of safe moves that have not been made
+        moveSet = set()
+        for move in self.safes:
+            if move not in self.moves_made:
+                moveSet.add(move)
+
+        #Return random choice from set
+        if len(moveSet) == 0:
+            return None
+        else:
+            randChoice = random.choice(list(moveSet))
+            return randChoice
+        
+
+
+        
 
     def make_random_move(self):
         """
@@ -225,4 +295,16 @@ class MinesweeperAI():
             1) have not already been chosen, and
             2) are not known to be mines
         """
-        raise NotImplementedError
+
+        #Create set of all moves not in self.mines or self.moves_made
+        moveSet = set()
+        for i in range(0, self.width):
+            for j in range(0, self.height):
+                if (i, j) not in self.moves_made and (i, j) not in self.mines:
+                    moveSet.add((i, j))
+
+        #Return random choice from set
+        if len(moveSet) == 0:
+            return None
+        else:
+            return random.choice(list(moveSet))
