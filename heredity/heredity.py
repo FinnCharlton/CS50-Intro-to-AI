@@ -43,6 +43,7 @@ def main():
     if len(sys.argv) != 2:
         sys.exit("Usage: python heredity.py data.csv")
     people = load_data(sys.argv[1])
+    print(people)
 
     # Keep track of gene and trait probabilities for each person
     probabilities = {
@@ -59,6 +60,7 @@ def main():
         }
         for person in people
     }
+    # print(probabilities)
 
     # Loop over all sets of people who might have the trait
     names = set(people)
@@ -78,8 +80,11 @@ def main():
             for two_genes in powerset(names - one_gene):
 
                 # Update probabilities with new joint probability
+                # print(f"Calculating JP: 1G= {one_gene}, 2G= {two_genes} T= {have_trait}")
                 p = joint_probability(people, one_gene, two_genes, have_trait)
                 update(probabilities, one_gene, two_genes, have_trait, p)
+                # print(f"New Probs = {probabilities}")
+    print(probabilities)
 
     # Ensure probabilities sum to 1
     normalize(probabilities)
@@ -127,11 +132,29 @@ def powerset(s):
         )
     ]
 
-people = {
-  'Harry': {'name': 'Harry', 'mother': 'Lily', 'father': 'James', 'trait': None},
-  'James': {'name': 'James', 'mother': None, 'father': None, 'trait': True},
-  'Lily': {'name': 'Lily', 'mother': None, 'father': None, 'trait': False}
-}
+# people = {
+#   'Harry': {'name': 'Harry', 'mother': 'Lily', 'father': 'James', 'trait': None},
+#   'James': {'name': 'James', 'mother': None, 'father': None, 'trait': True},
+#   'Lily': {'name': 'Lily', 'mother': None, 'father': None, 'trait': False}
+# }
+
+# one_gene = {'Harry'}
+# two_genes = {'James'}
+# has_trait = {'James'}
+
+def find_gene_number(person, one_gene, two_genes):
+    """
+    Custom function.
+    
+    Takes a person's name and returns the amount of genes they have based on given sets
+    """
+    if person in one_gene:
+        return 1
+    elif person in two_genes:
+        return 2
+    else:
+        return 0
+    
 
 def joint_probability(people, one_gene, two_genes, have_trait):
     """
@@ -144,7 +167,61 @@ def joint_probability(people, one_gene, two_genes, have_trait):
         * everyone in set `have_trait` has the trait, and
         * everyone not in set` have_trait` does not have the trait.
     """
-    raise NotImplementedError
+    #Create dictionaries of inheritence probabilities
+    inheritenceProbs = {
+        0 : 0 + PROBS['mutation'],
+        1 : 0.5, #Plus and minus mutation
+        2: 1 - PROBS['mutation']
+    }
+
+    #Initialise output dictionary
+    jointProbs = dict()
+
+    #Loop through people
+    for person in people:
+
+        #If the person is parentless, we can fetch unconditional probabilities
+        if people[person]['mother'] == None:
+            
+            #If person in one_gene, fetch probability of one gene * trait status
+            if person in one_gene:
+                jointProbs[person] = PROBS['gene'][1]*PROBS['trait'][1][person in have_trait]
+
+            #If person in one_gene, fetch probability of one gene * trait status
+            elif person in two_genes:
+                jointProbs[person] = PROBS['gene'][2]*PROBS['trait'][2][person in have_trait]
+
+            #If person in neither, fetch probability of no genes * trait status
+            else:
+                jointProbs[person] = PROBS['gene'][0]*PROBS['trait'][0][person in have_trait]
+
+        #If the person has parents, we use probabilities of inheritence.
+        else:
+
+            #Find probabilities that mother and father pass on gene
+            motherPass = inheritenceProbs[find_gene_number(people[person]['mother'],one_gene,two_genes)]
+            fatherPass = inheritenceProbs[find_gene_number(people[person]['father'],one_gene,two_genes)]
+
+            #If person in one_gene, calculate XOR percentage
+            if person in one_gene:
+                jointProbs[person] = ((motherPass*(1-fatherPass))+(fatherPass*(1-motherPass)))*PROBS['trait'][1][person in have_trait]
+
+            #If person in two_gene, calculate AND percentage
+            elif person in two_genes:
+                jointProbs[person] = (motherPass*fatherPass)*PROBS['trait'][2][person in have_trait]
+
+            #If person in neither, calculate AND percentage for not passing
+            else:
+                jointProbs[person] = ((1-motherPass)*(1-fatherPass))*PROBS['trait'][2][person in have_trait]
+
+    #Sum probabilities
+    product = 1
+    for value in jointProbs.values():
+        product *= value
+
+    return product
+
+# print(joint_probability(people,one_gene,two_genes,has_trait))
 
 
 def update(probabilities, one_gene, two_genes, have_trait, p):
@@ -154,7 +231,13 @@ def update(probabilities, one_gene, two_genes, have_trait, p):
     Which value for each distribution is updated depends on whether
     the person is in `have_gene` and `have_trait`, respectively.
     """
-    raise NotImplementedError
+    #Loop over one_gene, updating probabilities
+    for person in probabilities.keys():
+        # print(f"Updating Probabilities: {person}")
+        # print(f"Updating gene {find_gene_number(person,one_gene,two_genes)}")
+        probabilities[person]['gene'][find_gene_number(person,one_gene,two_genes)] += p
+        # print(f"Updating trait {person in have_trait}")
+        probabilities[person]['trait'][person in have_trait] += p
 
 
 def normalize(probabilities):
@@ -162,8 +245,22 @@ def normalize(probabilities):
     Update `probabilities` such that each probability distribution
     is normalized (i.e., sums to 1, with relative proportions the same).
     """
-    raise NotImplementedError
+    #Loop through probability distributions
+    for person, dists in probabilities.items():
+        for type, dist2 in dists.items():
+
+            #Find sum of probabilities
+            sum = 0
+            for val in dist2.values():
+                sum += val
+
+            #Multiply each by 1/sum to normalise them
+            coefficient = 1/sum
+            for key in dist2.keys():
+                probabilities[person][type][key] *= coefficient
+
+        #Find sum of probabilities
 
 
-# if __name__ == "__main__":
-#     main()
+if __name__ == "__main__":
+    main()
