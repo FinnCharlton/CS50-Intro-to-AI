@@ -109,6 +109,7 @@ class CrosswordCreator():
                 if len(word) != var.length:
                     self.domains[var].remove(word)
 
+
     def revise(self, x, y):
         """
         Make variable `x` arc consistent with variable `y`.
@@ -212,7 +213,32 @@ class CrosswordCreator():
         The first value in the list, for example, should be the one
         that rules out the fewest values among the neighbors of `var`.
         """
-        raise NotImplementedError
+        #Get neighbours of var
+        neighbours = self.crossword.neighbors(var)
+
+        #Get all intersections of var and neighbour
+        intersections = {neighbour: self.crossword.overlaps[var,neighbour] for neighbour in neighbours}
+
+        #Loop through values in domain of var
+        for word in self.domains[var]:
+
+            #Initialise count variable
+            reductionCount = 0
+
+            #Loop through intersecting variables
+            for neighbour, overlap in intersections.items():
+
+                #Unpack tuple
+                i, j = overlap
+
+                #Find overlapping letter
+                overlapLetter = word[i]
+
+                #Find reduction in neighbour domain
+                newDomain = [wd for wd in self.domains[neighbour] if wd[j] == overlapLetter]
+                reductionCount += (len(self.crossword.domains[neighbour]) - len(newDomain))
+            
+
 
     def select_unassigned_variable(self, assignment):
         """
